@@ -1583,6 +1583,7 @@ export async function* createAnthropicStreamFromOpenAI(input: {
               stop_sequence: null,
             },
             usage: {
+              ...mapOpenAIUsageToAnthropic(chunk.usage),
               output_tokens: completionTokens,
             },
           } as BetaRawMessageStreamEvent
@@ -1811,6 +1812,7 @@ export async function* createAnthropicStreamFromOpenAIResponses(input: {
               stop_sequence: null,
             },
             usage: {
+              ...mapOpenAIUsageToAnthropic(event.response?.usage),
               output_tokens: completionTokens,
             },
           } as BetaRawMessageStreamEvent

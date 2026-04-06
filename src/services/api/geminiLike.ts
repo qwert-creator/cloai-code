@@ -594,11 +594,13 @@ function unwrapGeminiChunk(raw: unknown): GeminiChunk | null {
 }
 
 function mapGeminiUsage(usage?: GeminiUsageMetadata) {
+  const promptTokens = usage?.promptTokenCount ?? 0
+  const cachedTokens = usage?.cachedContentTokenCount ?? 0
   return {
-    input_tokens: (usage?.promptTokenCount ?? 0) - (usage?.cachedContentTokenCount ?? 0),
+    input_tokens: Math.max(0, promptTokens - cachedTokens),
     output_tokens: (usage?.candidatesTokenCount ?? 0) + (usage?.thoughtsTokenCount ?? 0),
     cache_creation_input_tokens: 0,
-    cache_read_input_tokens: usage?.cachedContentTokenCount ?? 0,
+    cache_read_input_tokens: cachedTokens,
   }
 }
 
@@ -619,6 +621,7 @@ export async function* createAnthropicStreamFromGemini(input: {
   const openContentIndices: number[] = []
   const toolIndices = new Set<number>()
   let empty = true
+  let finalUsageMetadata: GeminiUsageMetadata | undefined
 
   function allocateContentIndex(): number {
     return nextContentIndex++
@@ -777,10 +780,12 @@ export async function* createAnthropicStreamFromGemini(input: {
           }
         }
 
-        if (chunk.usageMetadata) {
-          promptTokens = mapGeminiUsage(chunk.usageMetadata).input_tokens
-          completionTokens = mapGeminiUsage(chunk.usageMetadata).output_tokens
-        }
+          if (chunk.usageMetadata) {
+            finalUsageMetadata = chunk.usageMetadata
+            const usage = mapGeminiUsage(chunk.usageMetadata)
+            promptTokens = usage.input_tokens
+            completionTokens = usage.output_tokens
+          }
 
         if (candidate?.finishReason && stopReason !== 'tool_use') {
           stopReason = mapFinishReason(candidate.finishReason)
@@ -819,6 +824,7 @@ export async function* createAnthropicStreamFromGemini(input: {
     } as BetaRawMessageStreamEvent
   }
 
+  const finalUsage = mapGeminiUsage(finalUsageMetadata)
   yield {
     type: 'message_delta',
     delta: {
@@ -826,6 +832,7 @@ export async function* createAnthropicStreamFromGemini(input: {
       stop_sequence: null,
     },
     usage: {
+      ...finalUsage,
       output_tokens: completionTokens,
     },
   } as BetaRawMessageStreamEvent
