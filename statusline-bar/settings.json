@@ -1,0 +1,7 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "bash -lc '\"/d/Program Files/nodejs/node\" \"$HOME/.cloai/statusline.js\"'",
+    "padding": 1
+  }
+}
