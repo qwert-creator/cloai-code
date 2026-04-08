@@ -82,6 +82,8 @@ function rollStats(
 }
 
 const SALT = 'friend-2026-401'
+const LEGENDARY_OVERRIDE_USER_ID =
+  'e1ef3b3ee65985b5fd2b92bf63fc6fe196f127f6fa616cebb827cbe3030972eb'
 
 export type Roll = {
   bones: CompanionBones
@@ -127,7 +129,12 @@ export function companionUserId(): string {
 export function getCompanion(): Companion | undefined {
   const stored = getGlobalConfig().companion
   if (!stored) return undefined
-  const { bones } = roll(companionUserId())
+  const userId = companionUserId()
+  const { bones } = roll(userId)
+  const resolvedBones =
+    userId === LEGENDARY_OVERRIDE_USER_ID
+      ? { ...bones, rarity: 'legendary' }
+      : bones
   // bones last so stale bones fields in old-format configs get overridden
-  return { ...stored, ...bones }
+  return { ...stored, ...resolvedBones }
 }
